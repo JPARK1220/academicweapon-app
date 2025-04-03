@@ -1,14 +1,15 @@
 import { CameraView, CameraType, useCameraPermissions, CameraCapturedPicture } from 'expo-camera';
 import { useState, useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { AntDesign } from '@expo/vector-icons';
 import PhotoPreviewSection from '@/components/PhotoPreviewSection';
+import SubjectSelector from '@/components/SubjectSelector';
+import CropOutline from '@/components/CropOutline';
 
 // index.tsx is the 1st screen, and the 1st screen for this app is a camera
 export default function CameraScreen() {
-    const [facing, setFacing] = useState<CameraType>('back');
     const [permission, requestPermission] = useCameraPermissions();
     const [photo, setPhoto] = useState<CameraCapturedPicture | null>(null);
+    const [selectedSubject, setSelectedSubject] = useState('CHEMISTRY');
     const cameraRef = useRef<CameraView | null>(null);
 
     if (!permission) {
@@ -22,7 +23,7 @@ export default function CameraScreen() {
             <View style={styles.container}>
                 <Text style={styles.message}>We need your permission to show the camera</Text>
                 <TouchableOpacity
-                    style={[styles.button, styles.permissionButton]}
+                    style={styles.permissionButton}
                     onPress={requestPermission}
                 >
                     <Text style={styles.text}>Grant Permission</Text>
@@ -30,10 +31,6 @@ export default function CameraScreen() {
             </View>
         );
     }
-
-    const toggleCameraFacing = () => {
-        setFacing(current => (current === 'back' ? 'front' : 'back'));
-    };
 
     const handleTakePhoto = async () => {
         if (cameraRef.current) {
@@ -57,26 +54,27 @@ export default function CameraScreen() {
         setPhoto(null);
     };
 
+    const handleSubjectChange = (subject: string) => {
+        setSelectedSubject(subject);
+    };
+
     if (photo) {
         return <PhotoPreviewSection photo={photo} handleRetakePhoto={handleRetakePhoto} />;
     }
 
     return (
         <View style={styles.container}>
-            <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
+            <CameraView style={styles.camera} ref={cameraRef}>
+                <CropOutline />
                 <View style={styles.buttonContainer}>
-                    <TouchableOpacity
-                        style={styles.button}
-                        onPress={toggleCameraFacing}
-                    >
-                        <AntDesign name="retweet" size={44} color="black" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.button}
-                        onPress={handleTakePhoto}
-                    >
-                        <AntDesign name="camera" size={44} color="black" />
-                    </TouchableOpacity>
+                    <SubjectSelector onSubjectChange={handleSubjectChange} />
+                    <View style={styles.captureButtonContainer}>
+                        <TouchableOpacity
+                            style={styles.captureButton}
+                            onPress={handleTakePhoto}
+                        >
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </CameraView>
         </View>
@@ -91,33 +89,39 @@ const styles = StyleSheet.create({
     message: {
         textAlign: 'center',
         paddingBottom: 10,
-        fontSize: 18,
+        fontSize: 16,
+        fontWeight: '600',
+        color: 'white',
     },
     camera: {
         flex: 1,
     },
     buttonContainer: {
         flex: 1,
-        flexDirection: 'row',
         backgroundColor: 'transparent',
-        margin: 64,
-    },
-    button: {
-        flex: 1,
-        alignSelf: 'flex-end',
+        justifyContent: 'flex-end',
         alignItems: 'center',
-        marginHorizontal: 10,
-        backgroundColor: 'gray',
-        borderRadius: 10,
-        padding: 10,
+        marginBottom: 30,
+    },
+    captureButtonContainer: {
+        marginBottom: 20,
+        alignItems: 'center',
+    },
+    captureButton: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        borderWidth: 4,
+        borderColor: 'white',
+        backgroundColor: 'transparent',
     },
     permissionButton: {
         marginHorizontal: 50,
         marginTop: 20,
     },
     text: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        fontSize: 16,
+        fontWeight: '600',
         color: 'white',
     },
 }); 
