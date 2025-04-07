@@ -9,7 +9,7 @@ import CropOutline from '@/components/CropOutline';
 export default function CameraScreen() {
     const [permission, requestPermission] = useCameraPermissions();
     const [photo, setPhoto] = useState<CameraCapturedPicture | null>(null);
-    const [selectedSubject, setSelectedSubject] = useState('CHEMISTRY');
+    const [selectedSubject, setSelectedSubject] = useState('MATH');
     const cameraRef = useRef<CameraView | null>(null);
 
     if (!permission) {
@@ -59,7 +59,12 @@ export default function CameraScreen() {
     };
 
     if (photo) {
-        return <PhotoPreviewSection photo={photo} handleRetakePhoto={handleRetakePhoto} />;
+        return <PhotoPreviewSection
+            photo={photo}
+            handleRetakePhoto={handleRetakePhoto}
+            selectedSubject={selectedSubject}
+            onSubjectChange={handleSubjectChange}
+        />;
     }
 
     return (
@@ -67,7 +72,10 @@ export default function CameraScreen() {
             <CameraView style={styles.camera} ref={cameraRef}>
                 <CropOutline />
                 <View style={styles.buttonContainer}>
-                    <SubjectSelector onSubjectChange={handleSubjectChange} />
+                    <SubjectSelector
+                        onSubjectChange={handleSubjectChange}
+                        initialSubjectName={selectedSubject}
+                    />
                     <View style={styles.captureButtonContainer}>
                         <TouchableOpacity
                             style={styles.captureButton}

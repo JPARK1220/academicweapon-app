@@ -1,6 +1,6 @@
 import { Fontisto } from '@expo/vector-icons';
 import { CameraCapturedPicture } from 'expo-camera';
-import React from 'react';
+import React, { useState } from 'react';
 import { TouchableOpacity, View, Image, StyleSheet, Text } from 'react-native';
 import SubjectSelector from '@/components/SubjectSelector';
 import CropOutline from '@/components/CropOutline';
@@ -8,14 +8,18 @@ import CropOutline from '@/components/CropOutline';
 const PhotoPreviewSection = ({
     photo,
     handleRetakePhoto,
-    selectedSubject,
-    onSubjectChange
+    selectedSubject
 }: {
     photo: CameraCapturedPicture;
     handleRetakePhoto: () => void;
     selectedSubject: string;
-    onSubjectChange: (subject: string) => void;
 }) => {
+    const [previewSubject, setPreviewSubject] = useState(selectedSubject);
+
+    const handlePreviewSubjectChange = (subject: string) => {
+        setPreviewSubject(subject);
+    };
+
     return (
         <View style={styles.container}>
             <Image
@@ -30,8 +34,8 @@ const PhotoPreviewSection = ({
 
             <View style={styles.buttonContainer}>
                 <SubjectSelector
-                    onSubjectChange={onSubjectChange}
-                    initialSubjectName={selectedSubject}
+                    onSubjectChange={handlePreviewSubjectChange}
+                    initialSubject={previewSubject}
                 />
                 <View style={styles.captureButtonContainer}>
                     <TouchableOpacity style={styles.captureButton}>

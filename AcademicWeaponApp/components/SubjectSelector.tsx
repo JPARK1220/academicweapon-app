@@ -1,22 +1,23 @@
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, Dimensions } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import Animated, {
     useAnimatedScrollHandler,
     useSharedValue,
     withSpring,
     useAnimatedStyle,
+    runOnJS,
 } from 'react-native-reanimated';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const SUBJECTS = [
-    { id: '1', name: 'HISTORY' },
-    { id: '2', name: 'SCIENCE' },
-    { id: '3', name: 'MATH' },
-    { id: '4', name: 'ENGLISH' },
-    { id: '5', name: 'SPANISH' },
-    { id: '6', name: 'FRENCH' },
-    { id: '7', name: 'CODING' },
+    { id: '1', name: 'CODING' },
+    { id: '2', name: 'HISTORY' },
+    { id: '3', name: 'SCIENCE' },
+    { id: '4', name: 'MATH' },
+    { id: '5', name: 'ENGLISH' },
+    { id: '6', name: 'SPANISH' },
+    { id: '7', name: 'FRENCH' },
 ];
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -50,21 +51,66 @@ const SubjectItem: React.FC<SubjectItemProps> = ({ item, index, activeIndex }) =
 
 interface SubjectSelectorProps {
     onSubjectChange: (subject: string) => void;
+    initialSubjectName?: string;
 }
 
-const SubjectSelector: React.FC<SubjectSelectorProps> = ({ onSubjectChange }) => {
+const SubjectSelector: React.FC<SubjectSelectorProps> = ({ onSubjectChange, initialSubjectName }) => {
+    const findInitialIndex = () => {
+        if (initialSubjectName) {
+            // console.log(initialSubjectName);
+            const index = SUBJECTS.findIndex(subject => subject.name === initialSubjectName);
+            if (index !== -1) {
+                return index;
+            }
+        }
+        return Math.floor(SUBJECTS.length / 2);
+    };
+
+    const initialIndex = findInitialIndex();
+
     const flatListRef = useRef<FlatList>(null);
-    const scrollX = useSharedValue(0);
-    const activeIndex = useSharedValue(2);
+    const scrollX = useSharedValue((ITEM_WIDTH + ITEM_SPACING) * initialIndex);
+    const activeIndex = useSharedValue(initialIndex);
+    const isScrolling = useSharedValue(false);
+
+    // Function to call onSubjectChange on the JS thread
+    const notifySubjectChange = (index: number) => {
+        if (onSubjectChange && index >= 0 && index < SUBJECTS.length) {
+            onSubjectChange(SUBJECTS[index].name);
+        }
+    };
 
     const scrollHandler = useAnimatedScrollHandler({
         onScroll: (event) => {
             scrollX.value = event.contentOffset.x;
-            const potentialIndex = Math.round((event.contentOffset.x + ITEM_WIDTH / 2) / (ITEM_WIDTH + ITEM_SPACING));
+            isScrolling.value = true;
+            const potentialIndex = Math.round((event.contentOffset.x + (ITEM_WIDTH + ITEM_SPACING) / 2) / (ITEM_WIDTH + ITEM_SPACING));
             const maxIndex = SUBJECTS.length - 1;
             activeIndex.value = Math.max(0, Math.min(potentialIndex, maxIndex));
         },
+        onBeginDrag: () => {
+            isScrolling.value = true;
+        },
+        onEndDrag: (event) => {
+            const finalIndex = Math.round(event.contentOffset.x / (ITEM_WIDTH + ITEM_SPACING));
+            const clampedIndex = Math.max(0, Math.min(finalIndex, SUBJECTS.length - 1));
+            activeIndex.value = clampedIndex;
+            isScrolling.value = false;
+            runOnJS(notifySubjectChange)(clampedIndex);
+        },
+        onMomentumEnd: (event) => {
+            const finalIndex = Math.round(event.contentOffset.x / (ITEM_WIDTH + ITEM_SPACING));
+            const clampedIndex = Math.max(0, Math.min(finalIndex, SUBJECTS.length - 1));
+            activeIndex.value = clampedIndex;
+            isScrolling.value = false;
+            runOnJS(notifySubjectChange)(clampedIndex);
+        }
     });
+
+    // Initial call to onSubjectChange with the starting index
+    useEffect(() => {
+        notifySubjectChange(initialIndex);
+    }, [initialIndex]);
 
     const renderItem = ({ item, index }: { item: { id: string; name: string }, index: number }) => (
         <SubjectItem item={item} index={index} activeIndex={activeIndex} />
@@ -98,7 +144,7 @@ const SubjectSelector: React.FC<SubjectSelectorProps> = ({ onSubjectChange }) =>
                     }}
                     onScroll={scrollHandler}
                     scrollEventThrottle={16}
-                    initialScrollIndex={2}
+                    initialScrollIndex={initialIndex}
                     getItemLayout={(data, index) => ({
                         length: ITEM_WIDTH + ITEM_SPACING,
                         offset: (ITEM_WIDTH + ITEM_SPACING) * index,
