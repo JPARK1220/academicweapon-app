@@ -1,13 +1,12 @@
 import { Fontisto } from '@expo/vector-icons';
 import { CameraCapturedPicture } from 'expo-camera';
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { TouchableOpacity, View, Image, StyleSheet, Text, Dimensions, LayoutChangeEvent } from 'react-native';
 import {
     PanGestureHandler,
     GestureHandlerRootView,
     State,
     PanGestureHandlerGestureEvent,
-    HandlerStateChangeEvent,
     PanGestureHandlerStateChangeEvent
 } from 'react-native-gesture-handler';
 import SubjectSelector from '@/components/SubjectSelector';
@@ -27,7 +26,7 @@ const markerSize = 30;
 const markerHitSlop = 20;
 
 // Define type for crop dimensions
-type CropDimensions = {
+export type CropDimensions = {
     top: number;
     left: number;
     width: number;
@@ -37,31 +36,32 @@ type CropDimensions = {
 // Define type for layout
 type Layout = { x: number; y: number; width: number; height: number } | null;
 
-const PhotoPreviewSection = ({
-    photo,
-    handleRetakePhoto,
-    selectedSubject,
-    onSubjectChange
-}: {
+// Define the props for PhotoPreviewSection
+interface PhotoPreviewSectionProps {
     photo: CameraCapturedPicture;
-    handleRetakePhoto: () => void;
     selectedSubject: string;
     onSubjectChange: (subject: string) => void;
-}) => {
-    // State for current crop dimensions
-    const [cropDimensions, setCropDimensions] = useState<CropDimensions>({
-        top: INITIAL_CROP_TOP,
-        left: INITIAL_CROP_LEFT,
-        width: INITIAL_CROP_WIDTH,
-        height: INITIAL_CROP_HEIGHT,
-    });
+    cropDimensions: CropDimensions; // Receive state from parent
+    onCropDimensionsChange: (dimensions: CropDimensions) => void; // Receive setter from parent
+    onConfirmCrop: () => void; // Function to call when crop is confirmed (capture button)
+    onRetake: () => void; // Function to call when retaking (trash button)
+}
 
+const PhotoPreviewSection: React.FC<PhotoPreviewSectionProps> = ({
+    photo,
+    selectedSubject,
+    onSubjectChange,
+    cropDimensions, // Use prop
+    onCropDimensionsChange, // Use prop setter
+    onConfirmCrop, // Use prop for confirm action
+    onRetake, // Use prop for retake action
+}) => {
     // Refs to store dimensions at the start of the gesture
     const startDimensionsRef = useRef<CropDimensions>(cropDimensions);
 
     // State to store layout of other components
-    const [trashLayout, setTrashLayout] = useState<Layout>(null);
-    const [bottomContainerLayout, setBottomContainerLayout] = useState<Layout>(null);
+    const [trashLayout, setTrashLayout] = React.useState<Layout>(null);
+    const [bottomContainerLayout, setBottomContainerLayout] = React.useState<Layout>(null);
 
     const PADDING = 10; // Padding between crop area and other elements
 
@@ -81,31 +81,31 @@ const PhotoPreviewSection = ({
         const { translationX, translationY } = event.nativeEvent;
         const start = startDimensionsRef.current;
 
-        // 1. Calculate potential new positions
         let potentialTop = start.top;
         let potentialLeft = start.left;
         let fixedRight = start.left + start.width;
         let fixedBottom = start.top + start.height;
 
+        // --- Calculate potential new positions based on corner ---
         if (corner === 'topLeft') {
             potentialTop = start.top + translationY;
             potentialLeft = start.left + translationX;
         } else if (corner === 'topRight') {
             potentialTop = start.top + translationY;
-            potentialLeft = start.left; // Left is fixed
+            // Left is fixed
             fixedRight = start.left + start.width + translationX; // Right moves
         } else if (corner === 'bottomLeft') {
-            potentialTop = start.top; // Top is fixed
+            // Top is fixed
             potentialLeft = start.left + translationX;
             fixedBottom = start.top + start.height + translationY; // Bottom moves
         } else if (corner === 'bottomRight') {
-            potentialTop = start.top; // Top is fixed
-            potentialLeft = start.left; // Left is fixed
+            // Top is fixed
+            // Left is fixed
             fixedRight = start.left + start.width + translationX; // Right moves
             fixedBottom = start.top + start.height + translationY; // Bottom moves
         }
 
-        // 2. Apply position constraints
+        // --- Apply constraints ---
         let finalTop = potentialTop;
         let finalLeft = potentialLeft;
 
@@ -115,13 +115,16 @@ const PhotoPreviewSection = ({
         fixedRight = Math.min(SCREEN_WIDTH, fixedRight);
         fixedBottom = Math.min(SCREEN_HEIGHT, fixedBottom);
 
-        // UI element constraints (apply to the edges being potentially moved)
+        // UI element constraints
         if (trashLayout) {
             if (corner === 'topLeft' || corner === 'topRight') {
                 finalTop = Math.max(finalTop, trashLayout.y + trashLayout.height + PADDING);
             }
+            // Adjust right boundary constraint if necessary (e.g., prevent overlap)
+            // This might need refinement based on exact UI layout goals
             if (corner === 'topRight' || corner === 'bottomRight') {
-                fixedRight = Math.min(fixedRight, trashLayout.x - PADDING);
+                // Example: prevent right edge from overlapping trash button's left edge
+                // fixedRight = Math.min(fixedRight, trashLayout.x - PADDING);
             }
         }
         if (bottomContainerLayout) {
@@ -131,42 +134,31 @@ const PhotoPreviewSection = ({
         }
 
         // Ensure dragged corner doesn't cross the fixed one (minimum size precursor)
-        if (corner === 'topLeft') {
-            finalTop = Math.min(finalTop, fixedBottom - markerSize);
-            finalLeft = Math.min(finalLeft, fixedRight - markerSize);
+        let tempWidth = fixedRight - finalLeft;
+        let tempHeight = fixedBottom - finalTop;
+
+        if (tempWidth < markerSize) {
+            if (corner === 'topLeft' || corner === 'bottomLeft') {
+                finalLeft = fixedRight - markerSize; // Adjust left based on fixed right
+            } else { // topRight or bottomRight
+                fixedRight = finalLeft + markerSize; // Adjust right based on fixed left
+            }
         }
-        if (corner === 'topRight') {
-            finalTop = Math.min(finalTop, fixedBottom - markerSize);
-            fixedRight = Math.max(fixedRight, finalLeft + markerSize); // Adjust fixedRight based on constrained finalLeft
-        }
-        if (corner === 'bottomLeft') {
-            fixedBottom = Math.max(fixedBottom, finalTop + markerSize); // Adjust fixedBottom based on constrained finalTop
-            finalLeft = Math.min(finalLeft, fixedRight - markerSize);
-        }
-        if (corner === 'bottomRight') {
-            fixedBottom = Math.max(fixedBottom, finalTop + markerSize);
-            fixedRight = Math.max(fixedRight, finalLeft + markerSize);
+        if (tempHeight < markerSize) {
+            if (corner === 'topLeft' || corner === 'topRight') {
+                finalTop = fixedBottom - markerSize; // Adjust top based on fixed bottom
+            } else { // bottomLeft or bottomRight
+                fixedBottom = finalTop + markerSize; // Adjust bottom based on fixed top
+            }
         }
 
 
-        // 3. Calculate final width and height based on constrained positions
+        // Calculate final width and height based on constrained positions
         let finalWidth = fixedRight - finalLeft;
         let finalHeight = fixedBottom - finalTop;
 
-        // 4. Apply minimum size constraint (redundant check, but safe)
-        finalWidth = Math.max(markerSize, finalWidth);
-        finalHeight = Math.max(markerSize, finalHeight);
-
-        // Adjust position if minimum size constraint changed dimensions
-        if (corner === 'topLeft' || corner === 'bottomLeft') {
-            finalLeft = fixedRight - finalWidth;
-        }
-        if (corner === 'topLeft' || corner === 'topRight') {
-            finalTop = fixedBottom - finalHeight;
-        }
-
-        // Update state
-        setCropDimensions({
+        // Update state using the passed setter
+        onCropDimensionsChange({
             top: finalTop,
             left: finalLeft,
             width: finalWidth,
@@ -180,12 +172,10 @@ const PhotoPreviewSection = ({
         corner: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
     ) => {
         if (nativeEvent.state === State.BEGAN) {
-            // Store the dimensions when the gesture starts
+            // Store the dimensions from props when the gesture starts
             startDimensionsRef.current = { ...cropDimensions };
         }
-        // No need to explicitly persist on ACTIVE/END as state is updated continuously
-        // if (nativeEvent.oldState === State.ACTIVE) {
-        // }
+        // No change needed for ACTIVE/END as state is updated continuously via prop setter
     };
 
     // Simplified handlers using common functions
@@ -205,74 +195,84 @@ const PhotoPreviewSection = ({
         <GestureHandlerRootView style={styles.container}>
             <Image
                 style={styles.previewImage}
-                source={{ uri: 'data:image/jpg;base64,' + photo.base64 }}
+                source={{ uri: photo.uri }}
             />
             <CropOutline
                 label="Crop the question"
                 adjustable={true}
-                cropDimensions={cropDimensions}
+                cropDimensions={cropDimensions} // Use prop
             />
 
+            {/* Top Left Handle */}
             <PanGestureHandler
                 onGestureEvent={onTopLeftGestureEvent}
                 onHandlerStateChange={onTopLeftHandlerStateChange}
                 hitSlop={{ top: markerHitSlop, left: markerHitSlop, bottom: markerHitSlop, right: markerHitSlop }}
             >
                 <View style={[styles.cornerHandle, {
-                    top: cropDimensions.top - markerHitSlop,
-                    left: cropDimensions.left - markerHitSlop,
+                    top: cropDimensions.top - markerHitSlop / 2, // Adjust based on desired visual hit area vs actual handle size
+                    left: cropDimensions.left - markerHitSlop / 2,
                     width: markerSize + markerHitSlop,
                     height: markerSize + markerHitSlop,
+                    // backgroundColor: 'rgba(255, 0, 0, 0.3)', // DEBUG: Visualize hit area
                 }]} />
             </PanGestureHandler>
 
+            {/* Top Right Handle */}
             <PanGestureHandler
                 onGestureEvent={onTopRightGestureEvent}
                 onHandlerStateChange={onTopRightHandlerStateChange}
                 hitSlop={{ top: markerHitSlop, left: markerHitSlop, bottom: markerHitSlop, right: markerHitSlop }}
             >
                 <View style={[styles.cornerHandle, {
-                    top: cropDimensions.top - markerHitSlop,
-                    left: cropDimensions.left + cropDimensions.width - markerSize,
+                    top: cropDimensions.top - markerHitSlop / 2,
+                    left: cropDimensions.left + cropDimensions.width - markerSize - markerHitSlop / 2, // Adjust left based on handle size and desired hit area
                     width: markerSize + markerHitSlop,
                     height: markerSize + markerHitSlop,
+                    // backgroundColor: 'rgba(0, 255, 0, 0.3)', // DEBUG: Visualize hit area
                 }]} />
             </PanGestureHandler>
 
+            {/* Bottom Left Handle */}
             <PanGestureHandler
                 onGestureEvent={onBottomLeftGestureEvent}
                 onHandlerStateChange={onBottomLeftHandlerStateChange}
                 hitSlop={{ top: markerHitSlop, left: markerHitSlop, bottom: markerHitSlop, right: markerHitSlop }}
             >
                 <View style={[styles.cornerHandle, {
-                    top: cropDimensions.top + cropDimensions.height - markerSize,
-                    left: cropDimensions.left - markerHitSlop,
+                    top: cropDimensions.top + cropDimensions.height - markerSize - markerHitSlop / 2, // Adjust top based on handle size
+                    left: cropDimensions.left - markerHitSlop / 2,
                     width: markerSize + markerHitSlop,
                     height: markerSize + markerHitSlop,
+                    // backgroundColor: 'rgba(0, 0, 255, 0.3)', // DEBUG: Visualize hit area
                 }]} />
             </PanGestureHandler>
 
+            {/* Bottom Right Handle */}
             <PanGestureHandler
                 onGestureEvent={onBottomRightGestureEvent}
                 onHandlerStateChange={onBottomRightHandlerStateChange}
                 hitSlop={{ top: markerHitSlop, left: markerHitSlop, bottom: markerHitSlop, right: markerHitSlop }}
             >
                 <View style={[styles.cornerHandle, {
-                    top: cropDimensions.top + cropDimensions.height - markerSize,
-                    left: cropDimensions.left + cropDimensions.width - markerSize,
+                    top: cropDimensions.top + cropDimensions.height - markerSize - markerHitSlop / 2,
+                    left: cropDimensions.left + cropDimensions.width - markerSize - markerHitSlop / 2,
                     width: markerSize + markerHitSlop,
                     height: markerSize + markerHitSlop,
+                    // backgroundColor: 'rgba(255, 255, 0, 0.3)', // DEBUG: Visualize hit area
                 }]} />
             </PanGestureHandler>
 
+            {/* Trash Button - Uses onRetake prop */}
             <TouchableOpacity
                 style={styles.trashButton}
-                onPress={handleRetakePhoto}
+                onPress={onRetake}
                 onLayout={onTrashLayout}
             >
                 <Fontisto name='trash' size={28} color='white' />
             </TouchableOpacity>
 
+            {/* Bottom Controls Container */}
             <View
                 style={styles.buttonContainer}
                 onLayout={onBottomContainerLayout}
@@ -281,8 +281,13 @@ const PhotoPreviewSection = ({
                     onSubjectChange={onSubjectChange}
                     initialSubjectName={selectedSubject}
                 />
+                {/* Capture/Confirm Button - Uses onConfirmCrop prop */}
                 <View style={styles.captureButtonContainer}>
-                    <TouchableOpacity style={styles.captureButton}>
+                    <TouchableOpacity
+                        style={styles.captureButton}
+                        onPress={onConfirmCrop} // Call the confirmation handler
+                    >
+                        {/* You might want to add an icon here later, like a checkmark */}
                     </TouchableOpacity>
                 </View>
             </View>
@@ -297,8 +302,8 @@ const styles = StyleSheet.create({
         backgroundColor: 'black',
     },
     previewImage: {
-        flex: 1,
-        resizeMode: 'cover',
+        ...StyleSheet.absoluteFillObject, // Fill container
+        resizeMode: 'contain', // Contain ensures whole image is visible, adjust if needed
     },
     trashButton: {
         position: 'absolute',
@@ -306,7 +311,7 @@ const styles = StyleSheet.create({
         right: 20,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         borderRadius: 20,
-        padding: 8,
+        padding: 10, // Adjusted padding
     },
     buttonContainer: {
         position: 'absolute',
@@ -316,10 +321,10 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
         justifyContent: 'flex-end',
         alignItems: 'center',
-        marginBottom: 30,
+        paddingBottom: 30, // Use padding for spacing from bottom edge
     },
     captureButtonContainer: {
-        marginBottom: 20,
+        marginTop: 20, // Spacing between selector and button
         alignItems: 'center',
     },
     captureButton: {
@@ -328,10 +333,14 @@ const styles = StyleSheet.create({
         borderRadius: 40,
         borderWidth: 4,
         borderColor: 'white',
-        backgroundColor: 'rgba(128, 128, 128, 0.5)',
+        backgroundColor: 'rgba(128, 128, 128, 0.5)', // Semi-transparent gray
+        justifyContent: 'center', // Center potential future icon
+        alignItems: 'center', // Center potential future icon
     },
     cornerHandle: {
         position: 'absolute',
+        // Ensure handles are interactable but visually subtle if needed
+        // backgroundColor: 'rgba(0, 255, 0, 0.3)', // Optional: for debugging touch areas
     },
 });
 
