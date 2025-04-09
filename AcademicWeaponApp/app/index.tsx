@@ -1,9 +1,29 @@
 import { CameraView, CameraType, useCameraPermissions, CameraCapturedPicture } from 'expo-camera';
 import { useState, useRef } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Dimensions } from 'react-native';
 import PhotoPreviewSection from '@/components/PhotoPreviewSection';
 import SubjectSelector from '@/components/SubjectSelector';
 import CropOutline from '@/components/CropOutline';
+
+// Get screen dimensions
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Initial crop area dimensions (copied from PhotoPreviewSection)
+const CROP_AREA_WIDTH_PERCENT = 0.9;
+const CROP_AREA_HEIGHT_PERCENT = 0.3;
+const CROP_AREA_TOP_PERCENT = 0.20;
+const INITIAL_CROP_WIDTH = SCREEN_WIDTH * CROP_AREA_WIDTH_PERCENT;
+const INITIAL_CROP_HEIGHT = SCREEN_HEIGHT * CROP_AREA_HEIGHT_PERCENT;
+const INITIAL_CROP_TOP = SCREEN_HEIGHT * CROP_AREA_TOP_PERCENT;
+const INITIAL_CROP_LEFT = (SCREEN_WIDTH - INITIAL_CROP_WIDTH) / 2;
+
+// Define initial dimensions object
+const initialCropDimensions = {
+    top: INITIAL_CROP_TOP,
+    left: INITIAL_CROP_LEFT,
+    width: INITIAL_CROP_WIDTH,
+    height: INITIAL_CROP_HEIGHT,
+};
 
 // index.tsx is the 1st screen, and the 1st screen for this app is a camera
 export default function CameraScreen() {
@@ -70,7 +90,10 @@ export default function CameraScreen() {
     return (
         <View style={styles.container}>
             <CameraView style={styles.camera} ref={cameraRef}>
-                <CropOutline />
+                <CropOutline
+                    label="Take a picture of a question"
+                    cropDimensions={initialCropDimensions}
+                />
                 <View style={styles.buttonContainer}>
                     <SubjectSelector
                         onSubjectChange={handleSubjectChange}
