@@ -1,4 +1,4 @@
-import { Fontisto } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { CameraCapturedPicture } from 'expo-camera';
 import React, { useRef, useState } from 'react';
 import { TouchableOpacity, View, Image, StyleSheet, Text, Dimensions, LayoutChangeEvent } from 'react-native';
@@ -263,13 +263,13 @@ const PhotoPreviewSection: React.FC<PhotoPreviewSectionProps> = ({
                 }]} />
             </PanGestureHandler>
 
-            {/* Trash Button - Uses onRetake prop */}
+            {/* Trash Button - Use Ionicons */}
             <TouchableOpacity
                 style={styles.trashButton}
                 onPress={onRetake}
                 onLayout={onTrashLayout}
             >
-                <Fontisto name='trash' size={28} color='white' />
+                <Ionicons name="trash-outline" size={28} color="white" />
             </TouchableOpacity>
 
             {/* Bottom Controls Container */}
@@ -310,8 +310,10 @@ const styles = StyleSheet.create({
         top: 50,
         right: 20,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        borderRadius: 20,
-        padding: 10, // Adjusted padding
+        borderRadius: 25,
+        padding: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     buttonContainer: {
         position: 'absolute',
@@ -321,10 +323,10 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
         justifyContent: 'flex-end',
         alignItems: 'center',
-        paddingBottom: 30, // Use padding for spacing from bottom edge
+        paddingBottom: 50, // Use padding for spacing from bottom edge
     },
     captureButtonContainer: {
-        marginTop: 20, // Spacing between selector and button
+        marginTop: 0, // Reduced from 20 to bring the button closer to the subject selector
         alignItems: 'center',
     },
     captureButton: {

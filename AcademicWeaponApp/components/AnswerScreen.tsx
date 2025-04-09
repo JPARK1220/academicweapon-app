@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
-import { Fontisto } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 // import { CameraCapturedPicture } from 'expo-camera'; // No longer needed
 
 // CropDimensions type is no longer needed here
@@ -60,7 +60,7 @@ const AnswerScreen: React.FC<AnswerScreenProps> = ({
                 style={styles.backButton}
                 onPress={onGoBack}
             >
-                <Fontisto name='trash' size={24} color='white' />
+                <Ionicons name="trash-outline" size={24} color="white" />
             </TouchableOpacity>
         </View>
     );
@@ -113,8 +113,12 @@ const styles = StyleSheet.create({
         top: 50,
         right: 20,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        borderRadius: 20,
+        borderRadius: 22,
         padding: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 44,
+        height: 44,
     },
 });
 

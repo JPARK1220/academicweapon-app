@@ -279,11 +279,11 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
         justifyContent: 'flex-end',
         alignItems: 'center',
-        paddingBottom: 30,
+        paddingBottom: 50,
     },
     captureButtonContainer: {
         alignItems: 'center',
-        marginTop: 20,
+        marginTop: 0,
     },
     captureButton: {
         width: 80,
