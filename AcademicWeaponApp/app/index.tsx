@@ -6,6 +6,8 @@ import PhotoPreviewSection, { CropDimensions } from '@/components/PhotoPreviewSe
 import SubjectSelector from '@/components/SubjectSelector';
 import CropOutline from '@/components/CropOutline';
 import AnswerScreen from '@/components/AnswerScreen';
+import SettingsScreen from '@/components/SettingsScreen';
+import { Ionicons } from '@expo/vector-icons';
 
 // Get screen dimensions
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -28,10 +30,11 @@ const initialCropDimensions: CropDimensions = {
 };
 
 // index.tsx is the 1st screen, and the 1st screen for this app is a camera
-export default function CameraScreen() {
+export default function App() {
     const [permission, requestPermission] = useCameraPermissions();
     const [photo, setPhoto] = useState<CameraCapturedPicture | null>(null);
     const [selectedSubject, setSelectedSubject] = useState('MATH');
+    const [showSettings, setShowSettings] = useState(false);
     const cameraRef = useRef<CameraView | null>(null);
 
     // State for crop dimensions - lifted up
@@ -185,7 +188,9 @@ export default function CameraScreen() {
 
     // --- Render Logic ---
 
-    if (showAnswerScreen && croppedPhotoUri) {
+    if (showSettings) {
+        return <SettingsScreen onClose={() => setShowSettings(false)} />;
+    } else if (showAnswerScreen && croppedPhotoUri) {
         // Show Answer Screen with the CROPPED image URI
         return <AnswerScreen
             croppedPhotoUri={croppedPhotoUri}
@@ -207,7 +212,7 @@ export default function CameraScreen() {
                 />
                 {isProcessingCrop && (
                     <View style={styles.loadingOverlay}>
-                        <ActivityIndicator size="large" color="#ffffff" />
+                        <ActivityIndicator size="large" color="white" />
                         <Text style={styles.loadingText}>Cropping...</Text>
                     </View>
                 )}
@@ -217,27 +222,34 @@ export default function CameraScreen() {
         // Show Camera View
         return (
             <View style={styles.container}>
-                <CameraView style={styles.camera} ref={cameraRef}>
-                    <CropOutline
-                        label="Take a picture of a question"
-                        cropDimensions={initialCropDimensions}
-                        adjustable={false}
+                <CameraView style={styles.camera} ref={cameraRef} />
+                {/* Settings Button */}
+                <TouchableOpacity
+                    style={styles.settingsButton}
+                    onPress={() => setShowSettings(true)}
+                >
+                    <Ionicons name="settings-outline" size={24} color="white" />
+                </TouchableOpacity>
+
+                <CropOutline
+                    label="Take a picture of a question"
+                    cropDimensions={initialCropDimensions}
+                    adjustable={false}
+                />
+                <View style={styles.buttonContainer}>
+                    <SubjectSelector
+                        onSubjectChange={handleSubjectChange}
+                        initialSubjectName={selectedSubject}
                     />
-                    <View style={styles.buttonContainer}>
-                        <SubjectSelector
-                            onSubjectChange={handleSubjectChange}
-                            initialSubjectName={selectedSubject}
-                        />
-                        <View style={styles.captureButtonContainer}>
-                            <TouchableOpacity
-                                style={styles.captureButton}
-                                onPress={handleTakePhoto}
-                                disabled={isTakingPicture}
-                            >
-                            </TouchableOpacity>
-                        </View>
+                    <View style={styles.captureButtonContainer}>
+                        <TouchableOpacity
+                            style={styles.captureButton}
+                            onPress={handleTakePhoto}
+                            disabled={isTakingPicture}
+                        >
+                        </TouchableOpacity>
                     </View>
-                </CameraView>
+                </View>
             </View>
         );
     }
@@ -306,5 +318,16 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: 'white',
         textAlign: 'center',
+    },
+    settingsButton: {
+        position: 'absolute',
+        top: 50,
+        right: 20,
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+        borderRadius: 20,
+        padding: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1,
     },
 }); 

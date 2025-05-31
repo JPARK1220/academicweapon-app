@@ -60,7 +60,7 @@ const AnswerScreen: React.FC<AnswerScreenProps> = ({
                 style={styles.backButton}
                 onPress={onGoBack}
             >
-                <Ionicons name="trash-outline" size={24} color="white" />
+                <Ionicons name="trash-outline" size={28} color="white" />
             </TouchableOpacity>
         </View>
     );
@@ -111,14 +111,12 @@ const styles = StyleSheet.create({
     backButton: {
         position: 'absolute',
         top: 50,
-        right: 20,
+        left: 20,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        borderRadius: 22,
+        borderRadius: 25,
         padding: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        width: 44,
-        height: 44,
     },
 });
 

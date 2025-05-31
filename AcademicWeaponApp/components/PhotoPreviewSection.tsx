@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     trashButton: {
         position: 'absolute',
         top: 50,
-        right: 20,
+        left: 20,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         borderRadius: 25,
         padding: 10,
